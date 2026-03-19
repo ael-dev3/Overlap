@@ -55,6 +55,14 @@ await assertJson("/.well-known/farcaster.json", (json) => {
     throw new Error("Manifest did not point to the expected Firebase Hosting URL");
   }
 
+  if ((json.miniapp?.subtitle?.length ?? 0) > 30) {
+    throw new Error("Manifest subtitle exceeded Farcaster's 30 character limit");
+  }
+
+  if ((json.miniapp?.tagline?.length ?? 0) > 30) {
+    throw new Error("Manifest tagline exceeded Farcaster's 30 character limit");
+  }
+
   if (!json.miniapp?.requiredCapabilities?.includes("wallet.getEthereumProvider")) {
     throw new Error("Manifest did not declare wallet.getEthereumProvider capability");
   }

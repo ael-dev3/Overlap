@@ -46,12 +46,12 @@ const manifest = {
     buttonTitle: "Open Overlap",
     splashImageUrl: new URL("/overlap-icon.svg", baseUrl).toString(),
     splashBackgroundColor: "#0f0d16",
-    subtitle: "Discover people you genuinely overlap with",
+    subtitle: "Find your Farcaster overlap",
     description:
       "Overlap helps Farcaster users find relevant people through shared roles, ecosystems, and live profile context.",
     primaryCategory: "social",
     tags: ["farcaster", "social", "networking", "collaboration"],
-    tagline: "Collaborator discovery for Farcaster",
+    tagline: "Social discovery on Farcaster",
     ogTitle: "Overlap",
     ogDescription:
       "Discover relevant Farcaster people through roles, ecosystems, and real profile context.",
