@@ -1,5 +1,6 @@
 "use client";
 
+import { sdk } from "@farcaster/miniapp-sdk";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -99,7 +100,17 @@ export function OverlapApp() {
   const [walletError, setWalletError] = useState("");
   const [isMiniAppHost, setIsMiniAppHost] = useState(false);
   const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+  const hasCalledReadyRef = useRef(false);
   const providerRef = useRef<EthereumProvider | null>(null);
+
+  useEffect(() => {
+    if (hasCalledReadyRef.current) {
+      return;
+    }
+
+    hasCalledReadyRef.current = true;
+    void sdk.actions.ready().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,8 +118,6 @@ export function OverlapApp() {
 
     async function detectWalletConnection() {
       try {
-        const { sdk } = await import("@farcaster/miniapp-sdk");
-        const readyPromise = sdk.actions.ready().catch(() => undefined);
         const inMiniApp = await sdk.isInMiniApp().catch(() => false);
 
         if (cancelled) {
@@ -116,10 +125,6 @@ export function OverlapApp() {
         }
 
         setIsMiniAppHost(inMiniApp);
-
-        if (inMiniApp) {
-          await readyPromise;
-        }
 
         const provider = (await sdk.wallet.getEthereumProvider()) as
           | EthereumProvider
