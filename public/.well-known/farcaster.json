@@ -1,0 +1,16 @@
+{
+  "miniapp": {
+    "version": "1",
+    "name": "Overlap",
+    "iconUrl": "https://overlap-fc.web.app/overlap-icon.svg",
+    "homeUrl": "https://overlap-fc.web.app/?miniApp=true",
+    "imageUrl": "https://overlap-fc.web.app/overlap-card.svg",
+    "buttonTitle": "Open Overlap",
+    "splashImageUrl": "https://overlap-fc.web.app/overlap-icon.svg",
+    "splashBackgroundColor": "#090b12",
+    "requiredCapabilities": [
+      "actions.composeCast",
+      "actions.viewProfile"
+    ]
+  }
+}

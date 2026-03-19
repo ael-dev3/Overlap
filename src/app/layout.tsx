@@ -14,7 +14,12 @@ const displayFont = Space_Grotesk({
   subsets: ["latin"],
 });
 
-const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+const defaultAppUrl =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://overlap-fc.web.app";
+
+const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL ?? defaultAppUrl);
 
 const miniAppEmbed = {
   version: "1",

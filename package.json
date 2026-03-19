@@ -8,16 +8,17 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "predev": "node scripts/build-farcaster-manifest.mjs",
+    "build": "node scripts/build-farcaster-manifest.mjs && next build",
+    "start": "firebase emulators:start --only hosting",
     "lint": "eslint .",
     "test": "vitest run",
     "check": "npm run lint && npm run test && npm run build",
-    "smoke": "node scripts/smoke-check.mjs"
+    "smoke": "node scripts/smoke-check.mjs",
+    "deploy:firebase": "npm run build && firebase deploy --only hosting --project overlap-fc"
   },
   "dependencies": {
     "@farcaster/miniapp-sdk": "^0.2.3",
-    "@farcaster/quick-auth": "^0.0.8",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
     "next": "16.2.0",
