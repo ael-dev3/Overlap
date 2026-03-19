@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
+  CircleAlert,
   CheckCircle2,
   Hammer,
+  LoaderCircle,
   Palette,
   Sparkles,
   TrendingUp,
+  Wallet,
   Waypoints,
 } from "lucide-react";
 
@@ -24,9 +27,22 @@ import {
   seekingIds,
 } from "@/lib/taxonomy";
 import type { DiscoveryProfile, EcosystemTag, Role } from "@/lib/types";
+import {
+  formatAddress,
+  getWalletErrorMessage,
+  normalizeAccountList,
+  requestAccounts,
+  type EthereumProvider,
+} from "@/lib/wallet";
 import { cn, toggleInList } from "@/lib/utils";
 
 const storageKey = "overlap.onboarding-profile.v1";
+
+type WalletGateState =
+  | "checking"
+  | "needs_connection"
+  | "connected"
+  | "unsupported";
 
 const defaultProfile: DiscoveryProfile = {
   roles: [],
@@ -79,6 +95,90 @@ export function OverlapApp() {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<DiscoveryProfile>(defaultProfile);
   const [showReview, setShowReview] = useState(false);
+  const [walletGateState, setWalletGateState] = useState<WalletGateState>("checking");
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletError, setWalletError] = useState("");
+  const [isMiniAppHost, setIsMiniAppHost] = useState(false);
+  const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+  const providerRef = useRef<EthereumProvider | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let unsubscribeAccountsChanged: (() => void) | undefined;
+
+    async function detectWalletConnection() {
+      try {
+        const { sdk } = await import("@farcaster/miniapp-sdk");
+        const inMiniApp = await sdk.isInMiniApp().catch(() => false);
+
+        if (cancelled) {
+          return;
+        }
+
+        setIsMiniAppHost(inMiniApp);
+
+        const provider = (await sdk.wallet.getEthereumProvider()) as
+          | EthereumProvider
+          | undefined;
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!provider) {
+          providerRef.current = null;
+          setWalletGateState("unsupported");
+          return;
+        }
+
+        providerRef.current = provider;
+
+        const applyAccounts = (value: unknown) => {
+          const [nextAddress] = normalizeAccountList(value);
+          setWalletAddress(nextAddress ?? null);
+          setWalletGateState(nextAddress ? "connected" : "needs_connection");
+          setWalletError("");
+        };
+
+        try {
+          const accounts = await requestAccounts(provider, "eth_accounts");
+
+          if (cancelled) {
+            return;
+          }
+
+          applyAccounts(accounts);
+        } catch {
+          if (!cancelled) {
+            setWalletGateState("needs_connection");
+          }
+        }
+
+        const handleAccountsChanged = (accounts: unknown) => {
+          if (!cancelled) {
+            applyAccounts(accounts);
+          }
+        };
+
+        provider.on?.("accountsChanged", handleAccountsChanged);
+        unsubscribeAccountsChanged = () => {
+          provider.removeListener?.("accountsChanged", handleAccountsChanged);
+        };
+      } catch (error) {
+        if (!cancelled) {
+          setWalletGateState("unsupported");
+          setWalletError(getWalletErrorMessage(error));
+        }
+      }
+    }
+
+    void detectWalletConnection();
+
+    return () => {
+      cancelled = true;
+      unsubscribeAccountsChanged?.();
+    };
+  }, []);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
@@ -171,27 +271,159 @@ export function OverlapApp() {
     setStep((current) => Math.max(0, current - 1));
   }
 
+  async function handleConnectWallet() {
+    setIsConnectingWallet(true);
+    setWalletError("");
+
+    try {
+      const provider = providerRef.current;
+
+      if (!provider) {
+        throw new Error(
+          isMiniAppHost
+            ? "This Farcaster host does not expose wallet connection."
+            : "Open Overlap inside Farcaster to connect your wallet.",
+        );
+      }
+
+      const accounts = await requestAccounts(provider, "eth_requestAccounts");
+      const [nextAddress] = normalizeAccountList(accounts);
+
+      if (!nextAddress) {
+        throw new Error("Wallet connection completed without returning an address.");
+      }
+
+      setWalletAddress(nextAddress);
+      setWalletGateState("connected");
+    } catch (error) {
+      setWalletGateState(providerRef.current ? "needs_connection" : "unsupported");
+      setWalletError(getWalletErrorMessage(error));
+    } finally {
+      setIsConnectingWallet(false);
+    }
+  }
+
+  if (walletGateState === "checking") {
+    return (
+      <AppShell stepLabel="Wallet">
+        <div className="hidden" aria-hidden="true">
+          <MiniAppBootstrap />
+        </div>
+        <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-32">
+          <section className="flex flex-1 flex-col items-center justify-center text-center">
+            <div className="glass-card inline-flex h-20 w-20 items-center justify-center rounded-[28px]">
+              <LoaderCircle className="h-8 w-8 animate-spin text-[#bf9cff]" />
+            </div>
+            <h1 className="mt-8 text-4xl leading-tight font-extrabold tracking-tight text-on-surface">
+              Checking your{" "}
+              <span className="bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
+                wallet
+              </span>
+            </h1>
+            <p className="mt-3 max-w-sm text-base leading-relaxed text-on-surface-variant">
+              Looking for an already connected Farcaster wallet so returning users can
+              skip the connect step.
+            </p>
+          </section>
+        </main>
+      </AppShell>
+    );
+  }
+
+  if (walletGateState !== "connected") {
+    return (
+      <AppShell stepLabel="Connect">
+        <div className="hidden" aria-hidden="true">
+          <MiniAppBootstrap />
+        </div>
+        <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-32">
+          <section className="mb-10">
+            <h1 className="mb-3 text-4xl leading-tight font-extrabold tracking-tight text-on-surface">
+              Connect your{" "}
+              <span className="bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
+                wallet
+              </span>
+            </h1>
+            <p className="text-base leading-relaxed text-on-surface-variant">
+              Overlap uses your connected Farcaster wallet to anchor the profile flow to
+              a real account before onboarding starts.
+            </p>
+          </section>
+
+          <section className="glass-card rounded-[28px] p-5">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-primary to-secondary text-white shadow-[0_0_24px_rgba(127,50,227,0.34)]">
+                <Wallet className="h-6 w-6" strokeWidth={2.2} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-on-surface">Wallet required</h2>
+                <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+                  Once your wallet is connected, this page disappears and Overlap drops
+                  you straight into the role and blockchain setup.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3 text-sm leading-6 text-on-surface-variant">
+              <InfoRow copy="Resolve your Farcaster account without a fake placeholder profile." />
+              <InfoRow copy="Prepare the app for wallet-based profile enrichment and Neynar scoring." />
+              <InfoRow copy="Keep future discovery tied to the same connected identity." />
+            </div>
+
+            {walletError ? (
+              <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/8 px-4 py-3 text-sm text-amber-100">
+                <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                <p>{walletError}</p>
+              </div>
+            ) : null}
+
+            {!isMiniAppHost && walletGateState === "unsupported" ? (
+              <div className="mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm leading-6 text-on-surface-variant">
+                Open the app inside Farcaster to access the embedded wallet provider.
+              </div>
+            ) : null}
+          </section>
+
+          <footer className="mt-auto pt-10">
+            <button
+              type="button"
+              onClick={handleConnectWallet}
+              disabled={isConnectingWallet || walletGateState === "unsupported"}
+              className={cn(
+                "flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-primary to-secondary py-5 text-lg font-bold text-white shadow-2xl transition-all duration-200",
+                !isConnectingWallet && walletGateState !== "unsupported"
+                  ? "hover:brightness-110 active:scale-[0.98]"
+                  : "cursor-not-allowed opacity-45",
+              )}
+            >
+              {isConnectingWallet ? (
+                <>
+                  <LoaderCircle className="h-5 w-5 animate-spin" />
+                  Connecting wallet
+                </>
+              ) : walletGateState === "unsupported" ? (
+                "Wallet unavailable"
+              ) : (
+                <>
+                  Connect wallet
+                  <ArrowRight className="h-5 w-5" />
+                </>
+              )}
+            </button>
+            <p className="mt-6 text-center text-[10px] font-medium tracking-tighter text-on-surface-variant/50 uppercase">
+              Privacy encrypted by Farcaster Protocol
+            </p>
+          </footer>
+        </main>
+      </AppShell>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background-page text-on-surface">
+    <AppShell stepLabel={stepMeta[step].step}>
       <div className="hidden" aria-hidden="true">
         <MiniAppBootstrap />
       </div>
-
-      <header className="fixed top-0 z-50 w-full bg-[#0f0d14]/96 backdrop-blur-md">
-        <div className="mx-auto flex h-16 w-full max-w-md items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <Waypoints className="h-6 w-6 text-[#855AD1]" strokeWidth={2.2} />
-            <span className="text-xl font-black tracking-tight text-[#bf9cff]">
-              Overlap
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="rounded bg-surface-container-highest px-2 py-1 text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
-              {stepMeta[step].step}
-            </span>
-          </div>
-        </div>
-      </header>
 
       <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-32">
         <section className="mb-10">
@@ -204,6 +436,12 @@ export function OverlapApp() {
           <p className="text-base leading-relaxed text-on-surface-variant">
             {stepMeta[step].copy}
           </p>
+          {walletAddress ? (
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/4 px-3 py-1.5 text-[11px] font-semibold tracking-[0.22em] text-on-surface-variant uppercase">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
+              {formatAddress(walletAddress)}
+            </div>
+          ) : null}
         </section>
 
         <div className="flex-grow space-y-12">
@@ -276,6 +514,45 @@ export function OverlapApp() {
           </p>
         </footer>
       </main>
+    </AppShell>
+  );
+}
+
+function AppShell({
+  children,
+  stepLabel,
+}: {
+  children: React.ReactNode;
+  stepLabel: string;
+}) {
+  return (
+    <div className="min-h-screen bg-background-page text-on-surface">
+      <header className="fixed top-0 z-50 w-full bg-[#0f0d14]/96 backdrop-blur-md">
+        <div className="mx-auto flex h-16 w-full max-w-md items-center justify-between px-6">
+          <div className="flex items-center gap-2">
+            <Waypoints className="h-6 w-6 text-[#855AD1]" strokeWidth={2.2} />
+            <span className="text-xl font-black tracking-tight text-[#bf9cff]">
+              Overlap
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="rounded bg-surface-container-highest px-2 py-1 text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
+              {stepLabel}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {children}
+    </div>
+  );
+}
+
+function InfoRow({ copy }: { copy: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#bf9cff]" />
+      <p>{copy}</p>
     </div>
   );
 }

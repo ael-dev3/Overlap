@@ -27,6 +27,10 @@ await assertText("/", (text) => {
     throw new Error("Home page did not include Overlap branding");
   }
 
+  if (!text.includes("Checking your")) {
+    throw new Error("Home page did not render the wallet gate shell");
+  }
+
   if (!text.includes("fc:miniapp")) {
     throw new Error("Home page did not include the fc:miniapp embed metadata");
   }
