@@ -14,7 +14,6 @@ import {
   Waypoints,
 } from "lucide-react";
 
-import { MiniAppBootstrap } from "@/components/miniapp-bootstrap";
 import {
   ecosystemIds,
   ecosystemLabels,
@@ -109,6 +108,7 @@ export function OverlapApp() {
     async function detectWalletConnection() {
       try {
         const { sdk } = await import("@farcaster/miniapp-sdk");
+        const readyPromise = sdk.actions.ready().catch(() => undefined);
         const inMiniApp = await sdk.isInMiniApp().catch(() => false);
 
         if (cancelled) {
@@ -116,6 +116,10 @@ export function OverlapApp() {
         }
 
         setIsMiniAppHost(inMiniApp);
+
+        if (inMiniApp) {
+          await readyPromise;
+        }
 
         const provider = (await sdk.wallet.getEthereumProvider()) as
           | EthereumProvider
@@ -306,9 +310,6 @@ export function OverlapApp() {
   if (walletGateState === "checking") {
     return (
       <AppShell stepLabel="Wallet">
-        <div className="hidden" aria-hidden="true">
-          <MiniAppBootstrap />
-        </div>
         <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-32">
           <section className="flex flex-1 flex-col items-center justify-center text-center">
             <div className="glass-card inline-flex h-20 w-20 items-center justify-center rounded-[28px]">
@@ -333,9 +334,6 @@ export function OverlapApp() {
   if (walletGateState !== "connected") {
     return (
       <AppShell stepLabel="Connect">
-        <div className="hidden" aria-hidden="true">
-          <MiniAppBootstrap />
-        </div>
         <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-32">
           <section className="mb-10">
             <h1 className="mb-3 text-4xl leading-tight font-extrabold tracking-tight text-on-surface">
@@ -421,10 +419,6 @@ export function OverlapApp() {
 
   return (
     <AppShell stepLabel={stepMeta[step].step}>
-      <div className="hidden" aria-hidden="true">
-        <MiniAppBootstrap />
-      </div>
-
       <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-32">
         <section className="mb-10">
           <h1 className="mb-3 text-4xl leading-tight font-extrabold tracking-tight text-on-surface">
