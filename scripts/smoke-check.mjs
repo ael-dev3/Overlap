@@ -34,6 +34,14 @@ await assertText("/", (text) => {
   if (!text.includes("fc:miniapp")) {
     throw new Error("Home page did not include the fc:miniapp embed metadata");
   }
+
+  if (!text.includes("@farcaster/miniapp-sdk/dist/index.min.js")) {
+    throw new Error("Home page did not include the early Farcaster SDK boot script");
+  }
+
+  if (!text.includes("__OVERLAP_MINIAPP_READY__")) {
+    throw new Error("Home page did not include the early ready boot marker");
+  }
 });
 
 await assertText("/overlap-card.svg", (text) => {

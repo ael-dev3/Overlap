@@ -81,6 +81,51 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${bodyFont.variable} dark h-full antialiased`}>
+      <head>
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script
+          src="https://cdn.jsdelivr.net/npm/@farcaster/miniapp-sdk/dist/index.min.js"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            (function () {
+              var attempts = 0;
+              var maxAttempts = 40;
+              var delayMs = 125;
+
+              function callReady() {
+                attempts += 1;
+
+                var ready = window.miniapp &&
+                  window.miniapp.sdk &&
+                  window.miniapp.sdk.actions &&
+                  window.miniapp.sdk.actions.ready;
+
+                if (typeof ready !== "function") {
+                  if (attempts < maxAttempts) {
+                    window.setTimeout(callReady, delayMs);
+                  }
+                  return;
+                }
+
+                Promise.resolve(ready())
+                  .then(function () {
+                    window.__OVERLAP_MINIAPP_READY__ = true;
+                  })
+                  .catch(function () {
+                    if (attempts < maxAttempts) {
+                      window.setTimeout(callReady, delayMs);
+                    }
+                  });
+              }
+
+              callReady();
+            })();
+          `,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-background-dark font-sans text-on-surface selection:bg-primary/30 selection:text-on-surface">
         {children}
       </body>
