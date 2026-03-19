@@ -3,21 +3,36 @@ export interface TaxonomyOption<T extends string> {
   label: string;
 }
 
+export interface RoleOption<T extends string> extends TaxonomyOption<T> {
+  description: string;
+}
+
 export const roleOptions = [
-  { id: "builder", label: "Builder" },
-  { id: "creator", label: "Creator" },
-  { id: "trader", label: "Trader" },
-  { id: "artist", label: "Artist" },
-  { id: "founder", label: "Founder" },
-  { id: "researcher", label: "Researcher" },
-  { id: "marketer", label: "Marketer" },
-  { id: "collector", label: "Collector" },
-  { id: "investor", label: "Investor" },
-] as const satisfies readonly TaxonomyOption<string>[];
+  {
+    id: "builder",
+    label: "Builder",
+    description: "Ships products, tools, and experiments.",
+  },
+  {
+    id: "trader",
+    label: "Trader",
+    description: "Lives in markets, flow, and conviction.",
+  },
+  {
+    id: "creator",
+    label: "Creator",
+    description: "Turns ideas into content, reach, and momentum.",
+  },
+  {
+    id: "artist",
+    label: "Artist",
+    description: "Shapes visuals, taste, and culture.",
+  },
+] as const satisfies readonly RoleOption<string>[];
 
 export const ecosystemOptions = [
-  { id: "btc_maxi", label: "BTC maxi" },
-  { id: "eth_mainnet", label: "ETH mainnet" },
+  { id: "btc_maxi", label: "BTC" },
+  { id: "eth_mainnet", label: "ETH" },
   { id: "base", label: "Base" },
   { id: "solana", label: "Solana" },
   { id: "hyperliquid", label: "Hyperliquid" },

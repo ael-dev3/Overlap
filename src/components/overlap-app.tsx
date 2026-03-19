@@ -1,16 +1,29 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, Waypoints } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Hammer,
+  Palette,
+  Sparkles,
+  TrendingUp,
+  Waypoints,
+} from "lucide-react";
 
 import { MiniAppBootstrap } from "@/components/miniapp-bootstrap";
 import {
+  ecosystemIds,
   ecosystemLabels,
   ecosystemOptions,
+  interestIds,
   offeringLabels,
+  offeringIds,
   offeringOptions,
+  roleIds,
   roleLabels,
   roleOptions,
+  seekingIds,
   seekingLabels,
   seekingOptions,
 } from "@/lib/taxonomy";
@@ -40,7 +53,7 @@ const stepMeta = [
     step: "Step 1 of 3",
     lead: "What's your",
     accent: "role?",
-    copy: "Select the roles that best describe how you show up on Farcaster.",
+    copy: "Select one or more roles. This is the main signal Overlap uses to frame discovery.",
   },
   {
     step: "Step 2 of 3",
@@ -57,15 +70,10 @@ const stepMeta = [
 ] as const;
 
 const roleColors: Record<Role, string> = {
-  builder: "#7F32E3",
-  creator: "#A855F7",
-  trader: "#00F5FF",
-  artist: "#F472B6",
-  founder: "#855AD1",
-  researcher: "#34D399",
-  marketer: "#F59E0B",
-  collector: "#EC4899",
-  investor: "#60A5FA",
+  builder: "#3B82F6",
+  trader: "#8B5CF6",
+  creator: "#22C55E",
+  artist: "#F59E0B",
 };
 
 const ecosystemColors: Record<EcosystemTag, string> = {
@@ -94,6 +102,13 @@ const offeringColors: Record<OfferingIntent, string> = {
   role_opening: "#38BDF8",
 };
 
+const roleIcons = {
+  builder: Hammer,
+  trader: TrendingUp,
+  creator: Sparkles,
+  artist: Palette,
+} as const;
+
 export function OverlapApp() {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<DiscoveryProfile>(defaultProfile);
@@ -111,14 +126,25 @@ export function OverlapApp() {
       const frameId = window.requestAnimationFrame(() => {
         setProfile({
           ...defaultProfile,
-          ...parsed,
-          roles: parsed.roles ?? defaultProfile.roles,
-          ecosystems: parsed.ecosystems ?? defaultProfile.ecosystems,
-          interests: parsed.interests ?? defaultProfile.interests,
-          seeking: parsed.seeking ?? defaultProfile.seeking,
-          offering: parsed.offering ?? defaultProfile.offering,
-          about: parsed.about ?? defaultProfile.about,
-          building: parsed.building ?? defaultProfile.building,
+          roles: sanitizeSelections(parsed.roles ?? defaultProfile.roles, roleIds, 4),
+          ecosystems: sanitizeSelections(
+            parsed.ecosystems ?? defaultProfile.ecosystems,
+            ecosystemIds,
+            5,
+          ),
+          interests: sanitizeSelections(
+            parsed.interests ?? defaultProfile.interests,
+            interestIds,
+            6,
+          ),
+          seeking: sanitizeSelections(parsed.seeking ?? defaultProfile.seeking, seekingIds, 6),
+          offering: sanitizeSelections(
+            parsed.offering ?? defaultProfile.offering,
+            offeringIds,
+            6,
+          ),
+          about: sanitizeText(parsed.about),
+          building: sanitizeText(parsed.building),
         });
       });
 
@@ -238,8 +264,7 @@ export function OverlapApp() {
 
         <div className="flex-grow space-y-12">
           {step === 0 ? (
-            <SelectionSection
-              label="Roles"
+            <RoleSelectionSection
               options={roleOptions}
               selected={profile.roles}
               colors={roleColors}
@@ -361,6 +386,26 @@ function SummaryRow({
   );
 }
 
+function sanitizeSelections<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  max: number,
+) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const allowedSet = new Set(allowed);
+
+  return value.filter((item): item is T => {
+    return typeof item === "string" && allowedSet.has(item as T);
+  }).slice(0, max);
+}
+
+function sanitizeText(value: unknown) {
+  return typeof value === "string" ? value.trim().slice(0, 160) : "";
+}
+
 function hexToRgba(hex: string, alpha: number) {
   const normalized = hex.replace("#", "");
   const value =
@@ -392,6 +437,79 @@ function buildTokenStyle(color: string, selected: boolean) {
     borderColor: hexToRgba(color, 0.2),
     color,
   };
+}
+
+function RoleSelectionSection({
+  colors,
+  onToggle,
+  options,
+  selected,
+}: {
+  colors: Record<Role, string>;
+  onToggle: (value: Role) => void;
+  options: readonly (typeof roleOptions)[number][];
+  selected: readonly Role[];
+}) {
+  return (
+    <section>
+      <div className="mb-6 flex items-center gap-2">
+        <span className="h-6 w-1.5 rounded-full bg-[#7F32E3]" />
+        <h2 className="text-sm font-bold text-on-surface">Main roles</h2>
+      </div>
+      <p className="mb-6 text-sm leading-relaxed text-on-surface-variant">
+        Choose multiple if needed. These four roles are the main lens Overlap uses.
+      </p>
+      <div className="grid grid-cols-2 gap-4">
+        {options.map((option) => {
+          const isSelected = selected.includes(option.id);
+          const Icon = roleIcons[option.id];
+          const color = colors[option.id];
+
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onToggle(option.id)}
+              className="glass-card rounded-[24px] border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
+              style={{
+                borderColor: isSelected
+                  ? hexToRgba(color, 0.35)
+                  : "rgba(195, 155, 255, 0.05)",
+                boxShadow: isSelected ? `0 0 18px ${hexToRgba(color, 0.22)}` : undefined,
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl"
+                  style={{
+                    background: isSelected
+                      ? `linear-gradient(135deg, ${color}, ${hexToRgba(color, 0.8)})`
+                      : hexToRgba(color, 0.14),
+                    color: isSelected ? "#ffffff" : color,
+                  }}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={2.2} />
+                </div>
+                {isSelected ? (
+                  <CheckCircle2
+                    className="mt-0.5 h-5 w-5 shrink-0"
+                    style={{ color }}
+                    strokeWidth={2.3}
+                  />
+                ) : null}
+              </div>
+              <div className="mt-4">
+                <div className="text-base font-bold text-on-surface">{option.label}</div>
+                <p className="mt-1 text-xs leading-5 text-on-surface-variant">
+                  {option.description}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 function SelectionSection<T extends string>({

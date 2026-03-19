@@ -21,7 +21,7 @@ export type SeekingIntent = z.infer<typeof seekingSchema>;
 export type OfferingIntent = z.infer<typeof offeringSchema>;
 
 export const discoveryProfileSchema = z.object({
-  roles: z.array(roleSchema).max(5),
+  roles: z.array(roleSchema).max(4),
   ecosystems: z.array(ecosystemSchema).max(5),
   interests: z.array(interestSchema).max(6),
   seeking: z.array(seekingSchema).max(6),

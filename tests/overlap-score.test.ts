@@ -63,7 +63,7 @@ describe("rankMatches", () => {
 
     const clout = buildCandidate("clout", {
       discovery: {
-        roles: ["investor"],
+        roles: ["trader"],
         ecosystems: ["solana"],
         interests: ["trading"],
         seeking: ["distribution"],
