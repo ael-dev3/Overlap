@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 
 import { absoluteUrl } from "@/lib/utils";
 import "./globals.css";
 
 const bodyFont = Plus_Jakarta_Sans({
   variable: "--font-overlap-body",
-  subsets: ["latin"],
-});
-
-const displayFont = Space_Grotesk({
-  variable: "--font-overlap-display",
   subsets: ["latin"],
 });
 
@@ -31,7 +26,7 @@ const miniAppEmbed = {
       name: "Overlap",
       url: absoluteUrl(appUrl.toString(), "/?miniApp=true"),
       splashImageUrl: absoluteUrl(appUrl.toString(), "/overlap-icon.svg"),
-      splashBackgroundColor: "#090b12",
+      splashBackgroundColor: "#0f0d16",
     },
   },
 };
@@ -85,11 +80,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${bodyFont.variable} ${displayFont.variable} h-full antialiased`}
-    >
-      <body className="min-h-full bg-obsidian font-sans text-white selection:bg-fuchsia-400/30 selection:text-white">
+    <html lang="en" className={`${bodyFont.variable} dark h-full antialiased`}>
+      <body className="min-h-full bg-background-dark font-sans text-on-surface selection:bg-primary/30 selection:text-on-surface">
         {children}
       </body>
     </html>

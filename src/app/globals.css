@@ -1,21 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --obsidian: #090b12;
-  --obsidian-elevated: #101320;
-  --ink: #eaf0ff;
-  --ink-muted: #96a0b9;
-  --panel: rgba(17, 22, 34, 0.72);
-  --panel-border: rgba(255, 255, 255, 0.08);
+  --primary: #7f32e3;
+  --secondary: #a855f7;
+  --background-dark: #181121;
+  --background-page: #0f0d16;
+  --on-surface: #f5eefc;
+  --on-surface-variant: #aea9b6;
+  --surface-container-highest: #272431;
 }
 
 @theme inline {
-  --color-background: var(--obsidian);
-  --color-foreground: var(--ink);
-  --color-obsidian: var(--obsidian);
-  --color-obsidian-elevated: var(--obsidian-elevated);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-background-dark: var(--background-dark);
+  --color-background-page: var(--background-page);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-surface-container-highest: var(--surface-container-highest);
   --font-sans: var(--font-overlap-body);
-  --font-display: var(--font-overlap-display);
+  --font-display: var(--font-overlap-body);
 }
 
 * {
@@ -23,15 +27,15 @@
 }
 
 html {
-  background:
-    radial-gradient(circle at top, rgba(140, 92, 255, 0.18), transparent 26%),
-    linear-gradient(180deg, #0c0f18 0%, #090b12 100%);
+  background-color: var(--background-page);
 }
 
 body {
-  min-height: 100vh;
-  background: transparent;
-  color: var(--ink);
+  min-height: max(884px, 100dvh);
+  background:
+    radial-gradient(circle at top, rgba(127, 50, 227, 0.16), transparent 28%),
+    linear-gradient(180deg, #120f1a 0%, var(--background-page) 100%);
+  color: var(--on-surface);
   font-family: var(--font-overlap-body), sans-serif;
 }
 
@@ -40,24 +44,16 @@ a {
   text-decoration: none;
 }
 
-button,
-textarea {
+button {
   font: inherit;
 }
 
-textarea {
-  resize: vertical;
+.glass-card {
+  background: rgba(39, 36, 49, 0.4);
+  border: 1px solid rgba(195, 155, 255, 0.05);
+  backdrop-filter: blur(24px);
 }
 
-.glass-panel {
-  background: linear-gradient(
-    180deg,
-    rgba(21, 26, 38, 0.82) 0%,
-    rgba(12, 16, 26, 0.68) 100%
-  );
-  border: 1px solid var(--panel-border);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 28px 80px rgba(4, 6, 12, 0.42);
-  backdrop-filter: blur(26px);
+.neon-glow {
+  box-shadow: 0 0 15px rgba(195, 155, 255, 0.3);
 }
