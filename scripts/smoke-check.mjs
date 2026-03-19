@@ -39,12 +39,24 @@ await assertText("/overlap-card.svg", (text) => {
 });
 
 await assertJson("/.well-known/farcaster.json", (json) => {
+  if (!json.accountAssociation) {
+    throw new Error("Manifest did not expose accountAssociation");
+  }
+
+  if (json.accountAssociation.payload !== "eyJkb21haW4iOiJvdmVybGFwLWZjLndlYi5hcHAifQ") {
+    throw new Error("Manifest accountAssociation payload did not match the configured domain");
+  }
+
   if (json.miniapp?.name !== "Overlap") {
     throw new Error("Manifest did not expose the Overlap miniapp metadata");
   }
 
   if (json.miniapp?.homeUrl !== "https://overlap-fc.web.app/?miniApp=true") {
     throw new Error("Manifest did not point to the expected Firebase Hosting URL");
+  }
+
+  if (!json.miniapp?.requiredCapabilities?.includes("wallet.getEthereumProvider")) {
+    throw new Error("Manifest did not declare wallet.getEthereumProvider capability");
   }
 });
 

@@ -14,7 +14,15 @@ const outputPath = resolve(
   "farcaster.json",
 );
 
-const accountAssociation =
+const defaultAccountAssociation = {
+  header:
+    "eyJmaWQiOjUzOTg1NCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDc2RDBFN0ExMzI0ODk0NWVFOWY4MDhCNGE0NzIyNjJCMjg3Nzg5NDIifQ",
+  payload: "eyJkb21haW4iOiJvdmVybGFwLWZjLndlYi5hcHAifQ",
+  signature:
+    "Oh7ad8id4G8rpmng9RIv2LVvLM8skqflhgr5V9AZ5IYW0ptaKS+UQtgCfcTD53cqKhvC+48qHYIued3ETnGikRs=",
+};
+
+const accountAssociationFromEnv =
   process.env.FARCASTER_HEADER &&
   process.env.FARCASTER_PAYLOAD &&
   process.env.FARCASTER_SIGNATURE
@@ -25,8 +33,10 @@ const accountAssociation =
       }
     : undefined;
 
+const accountAssociation = accountAssociationFromEnv ?? defaultAccountAssociation;
+
 const manifest = {
-  ...(accountAssociation ? { accountAssociation } : {}),
+  accountAssociation,
   miniapp: {
     version: "1",
     name: "Overlap",
@@ -35,8 +45,26 @@ const manifest = {
     imageUrl: new URL("/overlap-card.svg", baseUrl).toString(),
     buttonTitle: "Open Overlap",
     splashImageUrl: new URL("/overlap-icon.svg", baseUrl).toString(),
-    splashBackgroundColor: "#090b12",
-    requiredCapabilities: ["actions.composeCast", "actions.viewProfile"],
+    splashBackgroundColor: "#0f0d16",
+    subtitle: "Discover people you genuinely overlap with",
+    description:
+      "Overlap helps Farcaster users find relevant people through shared roles, ecosystems, and live profile context.",
+    primaryCategory: "social",
+    tags: ["farcaster", "social", "networking", "collaboration"],
+    tagline: "Collaborator discovery for Farcaster",
+    ogTitle: "Overlap",
+    ogDescription:
+      "Discover relevant Farcaster people through roles, ecosystems, and real profile context.",
+    ogImageUrl: new URL("/overlap-card.svg", baseUrl).toString(),
+    castShareUrl: new URL("/?miniApp=true", baseUrl).toString(),
+    webhookUrl: process.env.FARCASTER_WEBHOOK_URL || undefined,
+    requiredCapabilities: [
+      "actions.composeCast",
+      "actions.viewProfile",
+      "actions.signIn",
+      "wallet.getEthereumProvider",
+    ],
+    canonicalDomain: baseUrl.hostname,
     ...(process.env.FARCASTER_WEBHOOK_URL
       ? { webhookUrl: process.env.FARCASTER_WEBHOOK_URL }
       : {}),

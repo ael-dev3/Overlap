@@ -17,23 +17,13 @@ import {
   ecosystemLabels,
   ecosystemOptions,
   interestIds,
-  offeringLabels,
   offeringIds,
-  offeringOptions,
   roleIds,
   roleLabels,
   roleOptions,
   seekingIds,
-  seekingLabels,
-  seekingOptions,
 } from "@/lib/taxonomy";
-import type {
-  DiscoveryProfile,
-  EcosystemTag,
-  OfferingIntent,
-  Role,
-  SeekingIntent,
-} from "@/lib/types";
+import type { DiscoveryProfile, EcosystemTag, Role } from "@/lib/types";
 import { cn, toggleInList } from "@/lib/utils";
 
 const storageKey = "overlap.onboarding-profile.v1";
@@ -50,22 +40,16 @@ const defaultProfile: DiscoveryProfile = {
 
 const stepMeta = [
   {
-    step: "Step 1 of 3",
+    step: "Step 1 of 2",
     lead: "What's your",
     accent: "role?",
     copy: "Select one or more roles. This is the main signal Overlap uses to frame discovery.",
   },
   {
-    step: "Step 2 of 3",
+    step: "Step 2 of 2",
     lead: "What's your",
     accent: "home?",
     copy: "Select blockchains you call home.",
-  },
-  {
-    step: "Step 3 of 3",
-    lead: "What do you",
-    accent: "want?",
-    copy: "Choose the collaboration signals that should shape your intros.",
   },
 ] as const;
 
@@ -82,24 +66,6 @@ const ecosystemColors: Record<EcosystemTag, string> = {
   base: "#0052FF",
   solana: "#9945FF",
   hyperliquid: "#00F5FF",
-};
-
-const seekingColors: Record<SeekingIntent, string> = {
-  cofounder: "#7F32E3",
-  dev: "#38BDF8",
-  designer: "#F472B6",
-  feedback: "#F59E0B",
-  distribution: "#10B981",
-  brainstorm: "#A855F7",
-};
-
-const offeringColors: Record<OfferingIntent, string> = {
-  build: "#7F32E3",
-  design: "#F472B6",
-  feedback: "#F59E0B",
-  distribution: "#10B981",
-  brainstorm: "#A855F7",
-  role_opening: "#38BDF8",
 };
 
 const roleIcons = {
@@ -168,21 +134,8 @@ export function OverlapApp() {
     () => profile.ecosystems.map((ecosystem) => ecosystemLabels[ecosystem]),
     [profile.ecosystems],
   );
-  const selectedSeekingLabels = useMemo(
-    () => profile.seeking.map((item) => seekingLabels[item]),
-    [profile.seeking],
-  );
-  const selectedOfferingLabels = useMemo(
-    () => profile.offering.map((item) => offeringLabels[item]),
-    [profile.offering],
-  );
 
-  const canContinue =
-    step === 0
-      ? profile.roles.length > 0
-      : step === 1
-        ? profile.ecosystems.length > 0
-        : profile.seeking.length > 0 || profile.offering.length > 0;
+  const canContinue = step === 0 ? profile.roles.length > 0 : profile.ecosystems.length > 0;
 
   function toggleRole(role: Role) {
     setProfile((current) => ({
@@ -198,20 +151,6 @@ export function OverlapApp() {
     }));
   }
 
-  function toggleSeeking(intent: SeekingIntent) {
-    setProfile((current) => ({
-      ...current,
-      seeking: toggleInList(current.seeking, intent),
-    }));
-  }
-
-  function toggleOffering(intent: OfferingIntent) {
-    setProfile((current) => ({
-      ...current,
-      offering: toggleInList(current.offering, intent),
-    }));
-  }
-
   function handleContinue() {
     if (step < stepMeta.length - 1) {
       setShowReview(false);
@@ -223,6 +162,11 @@ export function OverlapApp() {
   }
 
   function handleBack() {
+    if (showReview) {
+      setShowReview(false);
+      return;
+    }
+
     setShowReview(false);
     setStep((current) => Math.max(0, current - 1));
   }
@@ -282,25 +226,6 @@ export function OverlapApp() {
             />
           ) : null}
 
-          {step === 2 ? (
-            <div className="space-y-12">
-              <SelectionSection
-                label="Seeking"
-                options={seekingOptions}
-                selected={profile.seeking}
-                colors={seekingColors}
-                onToggle={toggleSeeking}
-              />
-              <SelectionSection
-                label="Offering"
-                options={offeringOptions}
-                selected={profile.offering}
-                colors={offeringColors}
-                onToggle={toggleOffering}
-              />
-            </div>
-          ) : null}
-
           {showReview ? (
             <section className="glass-card rounded-[28px] p-5">
               <div className="mb-5 flex items-center gap-2">
@@ -317,16 +242,6 @@ export function OverlapApp() {
                 label="Blockchains"
                 values={selectedEcosystemLabels}
                 fallback="Select at least one chain."
-              />
-              <SummaryRow
-                label="Seeking"
-                values={selectedSeekingLabels}
-                fallback="Add a collaboration ask."
-              />
-              <SummaryRow
-                label="Offering"
-                values={selectedOfferingLabels}
-                fallback="Add what you can offer back."
               />
             </section>
           ) : null}
