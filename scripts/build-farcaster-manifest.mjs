@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
+import { execSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 
 const defaultAppUrl =
@@ -12,6 +13,12 @@ const outputPath = resolve(
   "public",
   ".well-known",
   "farcaster.json",
+);
+const generatedMetaPath = resolve(
+  process.cwd(),
+  "src",
+  "lib",
+  "build-meta.generated.ts",
 );
 
 const defaultAccountAssociation = {
@@ -34,6 +41,9 @@ const accountAssociationFromEnv =
     : undefined;
 
 const accountAssociation = accountAssociationFromEnv ?? defaultAccountAssociation;
+const launchVersion = resolveLaunchVersion();
+const launchUrl = new URL("/?miniApp=true", baseUrl);
+launchUrl.searchParams.set("v", launchVersion);
 
 const manifest = {
   accountAssociation,
@@ -41,7 +51,7 @@ const manifest = {
     version: "1",
     name: "Overlap",
     iconUrl: new URL("/overlap-icon.svg", baseUrl).toString(),
-    homeUrl: new URL("/?miniApp=true", baseUrl).toString(),
+    homeUrl: launchUrl.toString(),
     imageUrl: new URL("/overlap-card.svg", baseUrl).toString(),
     buttonTitle: "Open Overlap",
     splashImageUrl: new URL("/overlap-icon.svg", baseUrl).toString(),
@@ -56,7 +66,7 @@ const manifest = {
     ogDescription:
       "Discover relevant Farcaster people through roles, ecosystems, and real profile context.",
     ogImageUrl: new URL("/overlap-card.svg", baseUrl).toString(),
-    castShareUrl: new URL("/?miniApp=true", baseUrl).toString(),
+    castShareUrl: launchUrl.toString(),
     webhookUrl: process.env.FARCASTER_WEBHOOK_URL || undefined,
     requiredCapabilities: [
       "actions.composeCast",
@@ -72,6 +82,30 @@ const manifest = {
 };
 
 await mkdir(dirname(outputPath), { recursive: true });
+await mkdir(dirname(generatedMetaPath), { recursive: true });
+await writeFile(
+  generatedMetaPath,
+  `export const miniAppLaunchVersion = "${launchVersion}";\n`,
+  "utf8",
+);
 await writeFile(outputPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
 console.log(`wrote ${outputPath}`);
+
+function resolveLaunchVersion() {
+  const fromEnv = process.env.NEXT_PUBLIC_MINIAPP_LAUNCH_VERSION?.trim();
+
+  if (fromEnv) {
+    return fromEnv;
+  }
+
+  try {
+    return execSync("git rev-parse --short HEAD", {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "dev";
+  }
+}

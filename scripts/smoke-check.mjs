@@ -63,8 +63,23 @@ await assertJson("/.well-known/farcaster.json", (json) => {
     throw new Error("Manifest did not expose the Overlap miniapp metadata");
   }
 
-  if (json.miniapp?.homeUrl !== "https://overlap-fc.web.app/?miniApp=true") {
-    throw new Error("Manifest did not point to the expected Firebase Hosting URL");
+  const homeUrl = json.miniapp?.homeUrl;
+  if (typeof homeUrl !== "string") {
+    throw new Error("Manifest did not expose a homeUrl");
+  }
+
+  const parsedHomeUrl = new URL(homeUrl);
+
+  if (parsedHomeUrl.origin !== "https://overlap-fc.web.app") {
+    throw new Error("Manifest did not point to the expected Firebase Hosting origin");
+  }
+
+  if (parsedHomeUrl.searchParams.get("miniApp") !== "true") {
+    throw new Error("Manifest homeUrl did not preserve the miniApp=true launch parameter");
+  }
+
+  if (!parsedHomeUrl.searchParams.get("v")) {
+    throw new Error("Manifest homeUrl did not include a launch version parameter");
   }
 
   if ((json.miniapp?.subtitle?.length ?? 0) > 30) {

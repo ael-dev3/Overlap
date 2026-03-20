@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 
+import { buildMiniAppLaunchUrl } from "@/lib/miniapp-launch";
 import { absoluteUrl } from "@/lib/utils";
 import "./globals.css";
 
@@ -15,6 +16,7 @@ const defaultAppUrl =
     : "https://overlap-fc.web.app";
 
 const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL ?? defaultAppUrl);
+const launchUrl = buildMiniAppLaunchUrl(appUrl);
 
 const miniAppEmbed = {
   version: "1",
@@ -22,11 +24,22 @@ const miniAppEmbed = {
   button: {
     title: "Open Overlap",
     action: {
-      type: "launch_frame",
+      type: "launch_miniapp",
       name: "Overlap",
-      url: absoluteUrl(appUrl.toString(), "/?miniApp=true"),
+      url: launchUrl,
       splashImageUrl: absoluteUrl(appUrl.toString(), "/overlap-icon.svg"),
       splashBackgroundColor: "#0f0d16",
+    },
+  },
+};
+
+const legacyFrameEmbed = {
+  ...miniAppEmbed,
+  button: {
+    ...miniAppEmbed.button,
+    action: {
+      ...miniAppEmbed.button.action,
+      type: "launch_frame",
     },
   },
 };
@@ -71,6 +84,7 @@ export const metadata: Metadata = {
   },
   other: {
     "fc:miniapp": JSON.stringify(miniAppEmbed),
+    "fc:frame": JSON.stringify(legacyFrameEmbed),
   },
 };
 
