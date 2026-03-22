@@ -101,3 +101,70 @@ npm run deploy:firebase
 - Candidate generation is still seeded rather than live graph expansion.
 - Build-time live enrichment is optional; the deployed app is a static export for reliable Firebase Hosting deployment on Spark.
 - Production add-to-app flows still require a valid Farcaster account association for the manifest.
+
+## Ranking model
+
+Overlap should stay **deterministic and explainable**.
+The current prototype intentionally does not use LLM ranking.
+
+The scoring logic lives in `src/lib/scoring/overlap.ts` and combines:
+
+- shared **roles**
+- shared **ecosystems**
+- shared **interests**
+- bidirectional **collaboration intent** compatibility
+- alignment between stated interests and recent **topic extraction**
+- shared **channels**
+- shared **follow-neighborhood / graph** signals
+- recent **activity**
+- a mild **Neynar quality multiplier**
+
+### Current weight breakdown
+
+The prototype currently weights components as:
+
+- roles — **18%**
+- collaboration intent — **18%**
+- extracted topical overlap — **16%**
+- ecosystems — **14%**
+- interests — **14%**
+- channels — **10%**
+- graph overlap — **6%**
+- activity — **4%**
+
+Neynar score is applied as a **bounded quality modifier**, not a primary driver.
+In code, that multiplier is intentionally mild.
+
+### Product rules
+
+The ranking should preserve a few strong product rules:
+
+- relevant active people should beat passive prestige
+- overlap should matter more than raw popularity
+- collaboration fit should matter more than vanity metrics
+- every surfaced match should have plain-language reasons
+- Neynar should improve confidence, not dominate results
+
+### Explainability output
+
+Each ranked match should be able to explain itself with a compact breakdown and a short list of reasons, for example:
+
+```json
+{
+  "score": 0.82,
+  "overlapLabel": "High overlap",
+  "reasons": [
+    "Both selected Builder + Creator.",
+    "Both show up on Base.",
+    "Recent casts also point at AI + mini apps.",
+    "Looking for feedback lines up with offering brainstorming.",
+    "Active 6/7 days and posting right now."
+  ]
+}
+```
+
+That property matters for both product quality and implementation quality:
+
+- users can understand why someone appeared
+- operators can debug ranking changes quickly
+- future scoring edits stay reviewable instead of becoming opaque
