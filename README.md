@@ -43,6 +43,10 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+Outside Farcaster, the app now falls back to a browser preview mode so you can
+exercise onboarding and ranking without the embedded wallet provider. Inside
+Farcaster, the wallet gate still applies before discovery starts.
+
 ## Environment
 
 Optional environment variables:

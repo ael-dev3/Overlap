@@ -48,15 +48,13 @@ import {
   requestAccounts,
   type EthereumProvider,
 } from "@/lib/wallet";
+import {
+  resolveWalletGateState,
+  type WalletGateState,
+} from "@/lib/wallet-gate";
 import { cn, toggleInList } from "@/lib/utils";
 
 const storageKey = "overlap.onboarding-profile.v1";
-
-type WalletGateState =
-  | "checking"
-  | "needs_connection"
-  | "connected"
-  | "unsupported";
 
 const defaultProfile: DiscoveryProfile = {
   roles: [],
@@ -172,6 +170,20 @@ export function OverlapApp({ catalog }: OverlapAppProps) {
 
         setIsMiniAppHost(inMiniApp);
 
+        if (!inMiniApp) {
+          providerRef.current = null;
+          setWalletAddress(null);
+          setWalletGateState(
+            resolveWalletGateState({
+              inMiniApp,
+              hasProvider: false,
+              accounts: [],
+            }),
+          );
+          setWalletError("");
+          return;
+        }
+
         const provider = (await sdk.wallet.getEthereumProvider()) as
           | EthereumProvider
           | undefined;
@@ -182,16 +194,29 @@ export function OverlapApp({ catalog }: OverlapAppProps) {
 
         if (!provider) {
           providerRef.current = null;
-          setWalletGateState("unsupported");
+          setWalletGateState(
+            resolveWalletGateState({
+              inMiniApp,
+              hasProvider: false,
+              accounts: [],
+            }),
+          );
           return;
         }
 
         providerRef.current = provider;
 
         const applyAccounts = (value: unknown) => {
-          const [nextAddress] = normalizeAccountList(value);
+          const accounts = normalizeAccountList(value);
+          const [nextAddress] = accounts;
           setWalletAddress(nextAddress ?? null);
-          setWalletGateState(nextAddress ? "connected" : "needs_connection");
+          setWalletGateState(
+            resolveWalletGateState({
+              inMiniApp,
+              hasProvider: true,
+              accounts,
+            }),
+          );
           setWalletError("");
         };
 
@@ -205,7 +230,13 @@ export function OverlapApp({ catalog }: OverlapAppProps) {
           applyAccounts(accounts);
         } catch {
           if (!cancelled) {
-            setWalletGateState("needs_connection");
+            setWalletGateState(
+              resolveWalletGateState({
+                inMiniApp,
+                hasProvider: true,
+                accounts: [],
+              }),
+            );
           }
         }
 
@@ -322,6 +353,7 @@ export function OverlapApp({ catalog }: OverlapAppProps) {
     () => resolvedDiscovery.offering.map((item) => offeringLabels[item]),
     [resolvedDiscovery.offering],
   );
+  const isPreviewMode = walletGateState === "preview";
 
   const canContinue = step === 0 ? profile.roles.length > 0 : profile.ecosystems.length > 0;
 
@@ -416,7 +448,7 @@ export function OverlapApp({ catalog }: OverlapAppProps) {
     );
   }
 
-  if (walletGateState !== "connected") {
+  if (walletGateState !== "connected" && walletGateState !== "preview") {
     return (
       <AppShell stepLabel="Connect">
         <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-32">
@@ -523,6 +555,7 @@ export function OverlapApp({ catalog }: OverlapAppProps) {
                 {formatAddress(walletAddress)}
               </div>
             ) : null}
+            {isPreviewMode ? <PreviewModeBanner className="mt-5" /> : null}
           </section>
 
           <section className="glass-card rounded-[28px] p-5">
@@ -614,6 +647,7 @@ export function OverlapApp({ catalog }: OverlapAppProps) {
               {formatAddress(walletAddress)}
             </div>
           ) : null}
+          {isPreviewMode ? <PreviewModeBanner className="mt-5" /> : null}
         </section>
 
         <div className="flex-grow space-y-12">
@@ -717,6 +751,21 @@ function InfoRow({ copy }: { copy: string }) {
     <div className="flex items-start gap-3">
       <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#bf9cff]" />
       <p>{copy}</p>
+    </div>
+  );
+}
+
+function PreviewModeBanner({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-sky-300/18 bg-sky-300/10 px-4 py-3 text-sm leading-6 text-sky-100",
+        className,
+      )}
+    >
+      Preview mode skips the wallet gate outside Farcaster so you can test the
+      onboarding and ranking flow in a normal browser. Open Overlap inside
+      Farcaster for a real wallet connection and native Mini App actions.
     </div>
   );
 }
