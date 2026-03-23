@@ -15,18 +15,32 @@ import {
   Waypoints,
 } from "lucide-react";
 
+import { MatchCard } from "@/components/match-card";
+import { rankMatches } from "@/lib/scoring/overlap";
 import {
   ecosystemIds,
   ecosystemLabels,
   ecosystemOptions,
   interestIds,
+  interestLabels,
   offeringIds,
+  offeringLabels,
   roleIds,
   roleLabels,
   roleOptions,
   seekingIds,
+  seekingLabels,
 } from "@/lib/taxonomy";
-import type { DiscoveryProfile, EcosystemTag, Role } from "@/lib/types";
+import type {
+  CatalogSnapshot,
+  DiscoveryProfile,
+  EcosystemTag,
+  InterestTag,
+  OfferingIntent,
+  Role,
+  SeekingIntent,
+  ViewerProfile,
+} from "@/lib/types";
 import {
   formatAddress,
   getWalletErrorMessage,
@@ -91,10 +105,42 @@ const roleIcons = {
   artist: Palette,
 } as const;
 
-export function OverlapApp() {
+const roleInterestDefaults: Record<Role, readonly InterestTag[]> = {
+  builder: ["ai", "mini_apps", "agents"],
+  trader: ["trading", "defi", "agents"],
+  creator: ["content", "memes", "socialfi"],
+  artist: ["nfts", "content", "memes"],
+};
+
+const ecosystemInterestDefaults: Partial<Record<EcosystemTag, readonly InterestTag[]>> = {
+  eth_mainnet: ["defi"],
+  base: ["mini_apps", "content"],
+  solana: ["gaming", "nfts"],
+  hyperliquid: ["trading", "agents"],
+};
+
+const roleSeekingDefaults: Record<Role, readonly SeekingIntent[]> = {
+  builder: ["feedback", "brainstorm"],
+  trader: ["feedback", "brainstorm"],
+  creator: ["distribution", "brainstorm"],
+  artist: ["brainstorm", "distribution"],
+};
+
+const roleOfferingDefaults: Record<Role, readonly OfferingIntent[]> = {
+  builder: ["build", "brainstorm"],
+  trader: ["feedback", "brainstorm"],
+  creator: ["distribution", "brainstorm"],
+  artist: ["design", "brainstorm"],
+};
+
+interface OverlapAppProps {
+  catalog: CatalogSnapshot;
+}
+
+export function OverlapApp({ catalog }: OverlapAppProps) {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<DiscoveryProfile>(defaultProfile);
-  const [showReview, setShowReview] = useState(false);
+  const [showMatches, setShowMatches] = useState(false);
   const [walletGateState, setWalletGateState] = useState<WalletGateState>("checking");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletError, setWalletError] = useState("");
@@ -235,18 +281,52 @@ export function OverlapApp() {
     window.localStorage.setItem(storageKey, JSON.stringify(profile));
   }, [profile]);
 
+  const resolvedDiscovery = useMemo(
+    () => resolveDiscoveryProfile(profile, catalog.viewerSeed.discovery),
+    [catalog.viewerSeed.discovery, profile],
+  );
+
+  const viewer = useMemo<ViewerProfile>(
+    () => ({
+      ...catalog.viewerSeed,
+      discovery: resolvedDiscovery,
+    }),
+    [catalog.viewerSeed, resolvedDiscovery],
+  );
+
+  const rankedMatches = useMemo(
+    () => rankMatches(viewer, catalog.candidates).slice(0, 6),
+    [catalog.candidates, viewer],
+  );
+
+  const featuredMatch = rankedMatches[0] ?? null;
+  const supportingMatches = featuredMatch ? rankedMatches.slice(1) : rankedMatches;
+
   const selectedRoleLabels = useMemo(
-    () => profile.roles.map((role) => roleLabels[role]),
-    [profile.roles],
+    () => resolvedDiscovery.roles.map((role) => roleLabels[role]),
+    [resolvedDiscovery.roles],
   );
   const selectedEcosystemLabels = useMemo(
-    () => profile.ecosystems.map((ecosystem) => ecosystemLabels[ecosystem]),
-    [profile.ecosystems],
+    () => resolvedDiscovery.ecosystems.map((ecosystem) => ecosystemLabels[ecosystem]),
+    [resolvedDiscovery.ecosystems],
+  );
+  const selectedInterestLabels = useMemo(
+    () => resolvedDiscovery.interests.map((interest) => interestLabels[interest]),
+    [resolvedDiscovery.interests],
+  );
+  const selectedSeekingLabels = useMemo(
+    () => resolvedDiscovery.seeking.map((item) => seekingLabels[item]),
+    [resolvedDiscovery.seeking],
+  );
+  const selectedOfferingLabels = useMemo(
+    () => resolvedDiscovery.offering.map((item) => offeringLabels[item]),
+    [resolvedDiscovery.offering],
   );
 
   const canContinue = step === 0 ? profile.roles.length > 0 : profile.ecosystems.length > 0;
 
   function toggleRole(role: Role) {
+    setShowMatches(false);
     setProfile((current) => ({
       ...current,
       roles: toggleInList(current.roles, role),
@@ -254,6 +334,7 @@ export function OverlapApp() {
   }
 
   function toggleEcosystem(ecosystem: EcosystemTag) {
+    setShowMatches(false);
     setProfile((current) => ({
       ...current,
       ecosystems: toggleInList(current.ecosystems, ecosystem),
@@ -262,21 +343,20 @@ export function OverlapApp() {
 
   function handleContinue() {
     if (step < stepMeta.length - 1) {
-      setShowReview(false);
+      setShowMatches(false);
       setStep((current) => current + 1);
       return;
     }
 
-    setShowReview(true);
+    setShowMatches(true);
   }
 
   function handleBack() {
-    if (showReview) {
-      setShowReview(false);
+    if (showMatches) {
+      setShowMatches(false);
       return;
     }
 
-    setShowReview(false);
     setStep((current) => Math.max(0, current - 1));
   }
 
@@ -361,15 +441,15 @@ export function OverlapApp() {
               <div>
                 <h2 className="text-base font-bold text-on-surface">Wallet required</h2>
                 <p className="mt-2 text-sm leading-6 text-on-surface-variant">
-                  Once your wallet is connected, this page disappears and Overlap drops
-                  you straight into the role and blockchain setup.
+                  Once your wallet is connected, Overlap can drop you straight into a real
+                  match feed instead of a dead-end setup screen.
                 </p>
               </div>
             </div>
 
             <div className="mt-5 space-y-3 text-sm leading-6 text-on-surface-variant">
               <InfoRow copy="Resolve your Farcaster account without a fake placeholder profile." />
-              <InfoRow copy="Prepare the app for wallet-based profile enrichment and Neynar scoring." />
+              <InfoRow copy="Use your role + chain picks to generate a first-pass overlap feed immediately." />
               <InfoRow copy="Keep future discovery tied to the same connected identity." />
             </div>
 
@@ -422,6 +502,99 @@ export function OverlapApp() {
     );
   }
 
+  if (showMatches) {
+    return (
+      <AppShell stepLabel="Matches">
+        <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-16">
+          <section className="mb-8">
+            <h1 className="mb-3 text-4xl leading-tight font-extrabold tracking-tight text-on-surface">
+              Your overlap{" "}
+              <span className="bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
+                feed
+              </span>
+            </h1>
+            <p className="text-base leading-relaxed text-on-surface-variant">
+              This first pass uses your role + chain picks, then fills in interest and
+              collaboration defaults so the app can rank real people immediately.
+            </p>
+            {walletAddress ? (
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/4 px-3 py-1.5 text-[11px] font-semibold tracking-[0.22em] text-on-surface-variant uppercase">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
+                {formatAddress(walletAddress)}
+              </div>
+            ) : null}
+          </section>
+
+          <section className="glass-card rounded-[28px] p-5">
+            <div className="mb-5 flex items-center gap-2">
+              <span className="h-6 w-1.5 rounded-full bg-[#7F32E3]" />
+              <h2 className="text-base font-bold text-on-surface">Profile driving this feed</h2>
+            </div>
+            <p className="mb-5 text-sm leading-6 text-on-surface-variant">
+              Keep the flow lightweight now. Deeper onboarding can come later once the
+              ranked feed feels obviously useful.
+            </p>
+            <SummaryRow label="Roles" values={selectedRoleLabels} fallback="Select at least one role." />
+            <SummaryRow
+              label="Blockchains"
+              values={selectedEcosystemLabels}
+              fallback="Select at least one chain."
+            />
+            <SummaryRow
+              label="Interests"
+              values={selectedInterestLabels}
+              fallback="No interest signals yet."
+            />
+            <SummaryRow
+              label="Seeking"
+              values={selectedSeekingLabels}
+              fallback="No collaboration intent yet."
+            />
+            <SummaryRow
+              label="Offering"
+              values={selectedOfferingLabels}
+              fallback="No offering signals yet."
+            />
+          </section>
+
+          <section className="mt-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-on-surface">Top matches</h2>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  {rankedMatches.length} ranked people ready to review.
+                </p>
+              </div>
+            </div>
+
+            {featuredMatch ? (
+              <div className="space-y-4">
+                <MatchCard match={featuredMatch} featured />
+                {supportingMatches.map((match) => (
+                  <MatchCard key={match.candidate.id} match={match} />
+                ))}
+              </div>
+            ) : (
+              <div className="glass-card rounded-[28px] p-5 text-sm leading-6 text-on-surface-variant">
+                No matches yet. Edit the profile and widen the role or chain selection.
+              </div>
+            )}
+          </section>
+
+          <footer className="mt-8 pt-2">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/6 py-4 text-sm font-semibold text-on-surface transition hover:bg-white/10"
+            >
+              Edit profile
+            </button>
+          </footer>
+        </main>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell stepLabel={stepMeta[step].step}>
       <main className="mx-auto flex min-h-screen max-w-md flex-col px-6 pt-24 pb-32">
@@ -463,25 +636,17 @@ export function OverlapApp() {
             />
           ) : null}
 
-          {showReview ? (
-            <section className="glass-card rounded-[28px] p-5">
-              <div className="mb-5 flex items-center gap-2">
-                <span className="h-6 w-1.5 rounded-full bg-[#7F32E3]" />
-                <h2 className="text-base font-bold text-on-surface">Current profile</h2>
-              </div>
-
-              <SummaryRow
-                label="Roles"
-                values={selectedRoleLabels}
-                fallback="Select at least one role."
-              />
-              <SummaryRow
-                label="Blockchains"
-                values={selectedEcosystemLabels}
-                fallback="Select at least one chain."
-              />
-            </section>
-          ) : null}
+          <section className="glass-card rounded-[28px] p-5">
+            <div className="mb-5 flex items-center gap-2">
+              <span className="h-6 w-1.5 rounded-full bg-[#7F32E3]" />
+              <h2 className="text-base font-bold text-on-surface">What happens next</h2>
+            </div>
+            <div className="space-y-3 text-sm leading-6 text-on-surface-variant">
+              <InfoRow copy="Keep onboarding to the two strongest signals: role and chain." />
+              <InfoRow copy="Infer enough intent to unlock the ranked feed immediately." />
+              <InfoRow copy="Use the live match screen to decide what deeper onboarding should exist later." />
+            </div>
+          </section>
         </div>
 
         <footer className="mt-auto pt-10">
@@ -505,7 +670,7 @@ export function OverlapApp() {
                 : "cursor-not-allowed opacity-45",
             )}
           >
-            {step === stepMeta.length - 1 ? "Review" : "Continue"}
+            {step === stepMeta.length - 1 ? "See matches" : "Continue"}
             <ArrowRight className="h-5 w-5" />
           </button>
           <p className="mt-6 text-center text-[10px] font-medium tracking-tighter text-on-surface-variant/50 uppercase">
@@ -595,6 +760,45 @@ function sanitizeSelections<T extends string>(
 
 function sanitizeText(value: unknown) {
   return typeof value === "string" ? value.trim().slice(0, 160) : "";
+}
+
+function dedupeList<T extends string>(items: readonly T[]) {
+  return [...new Set(items)];
+}
+
+function resolveDiscoveryProfile(
+  profile: DiscoveryProfile,
+  seedDiscovery: DiscoveryProfile,
+): DiscoveryProfile {
+  const inferredInterests = dedupeList([
+    ...profile.interests,
+    ...profile.roles.flatMap((role) => roleInterestDefaults[role]),
+    ...profile.ecosystems.flatMap(
+      (ecosystem) => ecosystemInterestDefaults[ecosystem] ?? [],
+    ),
+  ]).slice(0, 6);
+
+  const inferredSeeking = dedupeList([
+    ...profile.seeking,
+    ...profile.roles.flatMap((role) => roleSeekingDefaults[role]),
+  ]).slice(0, 6);
+
+  const inferredOffering = dedupeList([
+    ...profile.offering,
+    ...profile.roles.flatMap((role) => roleOfferingDefaults[role]),
+  ]).slice(0, 6);
+
+  return {
+    ...seedDiscovery,
+    ...profile,
+    roles: profile.roles,
+    ecosystems: profile.ecosystems,
+    interests: inferredInterests,
+    seeking: inferredSeeking,
+    offering: inferredOffering,
+    about: profile.about || seedDiscovery.about,
+    building: profile.building || seedDiscovery.building,
+  };
 }
 
 function hexToRgba(hex: string, alpha: number) {
