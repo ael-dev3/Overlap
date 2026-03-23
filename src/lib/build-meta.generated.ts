@@ -1,1 +1,1 @@
-export const miniAppLaunchVersion = "ec9dbf4";
+export const miniAppLaunchVersion = "8371c03";
