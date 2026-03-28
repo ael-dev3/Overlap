@@ -318,7 +318,7 @@ function mergeLiveSignals<T extends CandidateProfile | ViewerProfile>(
           : actor.activity.extractedEcosystems,
       channels: liveChannels.length > 0 ? [...new Set(liveChannels)] : actor.activity.channels,
       castsLast7d: Math.max(actor.activity.castsLast7d, liveBundle.casts.length),
-      repliesLast7d: Math.min(
+      repliesLast7d: Math.max(
         actor.activity.repliesLast7d,
         liveBundle.casts.filter((cast) => cast.isReply).length,
       ),
