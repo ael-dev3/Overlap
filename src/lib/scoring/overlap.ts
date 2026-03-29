@@ -104,6 +104,23 @@ function compatibilityScore(
   return satisfied.length / seeking.length;
 }
 
+function findCompatibleIntentPair(
+  seeking: readonly SeekingIntent[],
+  offering: readonly OfferingIntent[],
+) {
+  for (const need of seeking) {
+    const matchedOffer = compatibilityMap[need].find((offer) =>
+      offering.includes(offer),
+    );
+
+    if (matchedOffer) {
+      return { need, offer: matchedOffer };
+    }
+  }
+
+  return null;
+}
+
 function scoreIntent(viewer: ViewerProfile, candidate: CandidateProfile) {
   const forward = compatibilityScore(
     viewer.discovery.seeking,
@@ -238,17 +255,15 @@ function buildReasons(
   }
 
   if (breakdown.intent > 0.2) {
-    const supportedNeed = viewer.discovery.seeking.find((need) =>
-      compatibilityMap[need].some((offer) =>
-        candidate.discovery.offering.includes(offer),
-      ),
+    const compatibleIntent = findCompatibleIntentPair(
+      viewer.discovery.seeking,
+      candidate.discovery.offering,
     );
-    const mirroredOffer = candidate.discovery.offering[0];
 
-    if (supportedNeed && mirroredOffer) {
+    if (compatibleIntent) {
       reasons.push({
         code: "shared_intent",
-        label: `${seekingLabels[supportedNeed]} lines up with ${offeringLabels[mirroredOffer]}.`,
+        label: `${seekingLabels[compatibleIntent.need]} lines up with ${offeringLabels[compatibleIntent.offer]}.`,
         weight: breakdown.intent * weights.intent,
       });
     }

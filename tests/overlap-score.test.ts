@@ -124,4 +124,24 @@ describe("rankMatches", () => {
     expect(ranked[0].candidate.id).toBe("compatible");
     expect(ranked[0].breakdown.intent).toBeGreaterThan(ranked[1].breakdown.intent);
   });
+
+  it("uses the compatible offer in the intent explanation", () => {
+    const candidate = buildCandidate("reason-match", {
+      discovery: {
+        roles: ["builder"],
+        ecosystems: ["base"],
+        interests: ["ai"],
+        seeking: [],
+        offering: ["distribution", "brainstorm"],
+        about: "",
+        building: "",
+      },
+    });
+
+    const [ranked] = rankMatches(defaultViewerSeed, [candidate]);
+    const intentReason = ranked.reasons.find((reason) => reason.code === "shared_intent");
+
+    expect(intentReason?.label).toBe("Want feedback lines up with Open to brainstorm.");
+    expect(intentReason?.label).not.toContain("distribution");
+  });
 });
