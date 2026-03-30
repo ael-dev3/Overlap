@@ -144,4 +144,38 @@ describe("rankMatches", () => {
     expect(intentReason?.label).toBe("Want feedback lines up with Open to brainstorm.");
     expect(intentReason?.label).not.toContain("distribution");
   });
+
+  it("keeps the activity explanation tied to the weekly snapshot", () => {
+    const candidate = buildCandidate("snapshot-activity", {
+      discovery: {
+        roles: ["artist"],
+        ecosystems: ["solana"],
+        interests: ["nfts"],
+        seeking: [],
+        offering: [],
+        about: "",
+        building: "",
+      },
+      activity: {
+        sampleCasts: ["Still sketching."],
+        extractedInterests: ["nfts"],
+        extractedEcosystems: ["solana"],
+        channels: [],
+        castsLast7d: 3,
+        repliesLast7d: 1,
+        activeDays7d: 2,
+        activeDays30d: 5,
+        lastActiveAt: "2026-03-01T18:00:00.000Z",
+        followingFids: [],
+        followerCount: 12,
+      },
+      neynarScore: null,
+    });
+
+    const [ranked] = rankMatches(defaultViewerSeed, [candidate]);
+    const activityReason = ranked.reasons.find((reason) => reason.code === "recent_activity");
+
+    expect(activityReason?.label).toBe("Recent cadence: 2/7 active days, 3 casts, 1 reply.");
+    expect(activityReason?.label).not.toContain("posting right now");
+  });
 });

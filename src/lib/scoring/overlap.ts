@@ -14,7 +14,12 @@ import type {
   SeekingIntent,
   ViewerProfile,
 } from "@/lib/types";
-import { clamp, uniqueIntersection, uniqueUnion } from "@/lib/utils";
+import {
+  clamp,
+  formatActivitySnapshot,
+  uniqueIntersection,
+  uniqueUnion,
+} from "@/lib/utils";
 
 const weights = {
   roles: 0.18,
@@ -312,7 +317,7 @@ function buildReasons(
 
   reasons.push({
     code: "recent_activity",
-    label: `Active ${candidate.activity.activeDays7d}/7 days and posting right now.`,
+    label: `Recent cadence: ${formatActivitySnapshot(candidate.activity)}.`,
     weight: breakdown.activity * weights.activity,
   });
 

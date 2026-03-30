@@ -38,26 +38,20 @@ export function formatSignedPercent(value: number) {
   return `${rounded > 0 ? "+" : ""}${rounded}%`;
 }
 
-export function formatActivity(value: string) {
-  const timestamp = Date.parse(value);
+function formatCount(value: number, singular: string, plural = `${singular}s`) {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
 
-  if (Number.isNaN(timestamp)) {
-    return "recently";
-  }
-
-  const deltaMinutes = Math.max(1, Math.round((Date.now() - timestamp) / 60_000));
-
-  if (deltaMinutes < 60) {
-    return `${deltaMinutes}m ago`;
-  }
-
-  const deltaHours = Math.round(deltaMinutes / 60);
-
-  if (deltaHours < 48) {
-    return `${deltaHours}h ago`;
-  }
-
-  return `${Math.round(deltaHours / 24)}d ago`;
+export function formatActivitySnapshot(value: {
+  activeDays7d: number;
+  castsLast7d: number;
+  repliesLast7d: number;
+}) {
+  return [
+    `${value.activeDays7d}/7 active days`,
+    formatCount(value.castsLast7d, "cast"),
+    formatCount(value.repliesLast7d, "reply", "replies"),
+  ].join(", ");
 }
 
 export function absoluteUrl(baseUrl: string, path: string) {

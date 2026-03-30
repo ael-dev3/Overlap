@@ -19,7 +19,7 @@ import {
 import type { RankedMatch } from "@/lib/types";
 import {
   cn,
-  formatActivity,
+  formatActivitySnapshot,
   formatPercent,
   formatSignedPercent,
   truncate,
@@ -188,7 +188,7 @@ export function MatchCard({ match, featured = false }: MatchCardProps) {
         </div>
         <p className="mt-2 text-white/72">“{candidate.activity.sampleCasts[0]}”</p>
         <p className="mt-2 text-xs text-white/45">
-          Last active {formatActivity(candidate.activity.lastActiveAt)}
+          Snapshot cadence: {formatActivitySnapshot(candidate.activity)}
         </p>
         {candidate.discovery.building ? (
           <p className="mt-3 text-xs leading-5 text-white/52">
