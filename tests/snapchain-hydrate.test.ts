@@ -81,4 +81,26 @@ describe("hydrateWithSnapchain", () => {
     expect(hydrated.activity.repliesLast7d).toBe(3);
     expect(hydrated.activity.castsLast7d).toBe(4);
   });
+
+  it("promotes a live profile photo onto the avatar token", async () => {
+    const candidate = buildCandidate();
+    const liveBundle: SnapchainLiveBundle = {
+      fid: candidate.fid!,
+      pfpUrl: "https://cdn.example.com/avatars/candidate.png",
+      casts: [],
+      followingFids: [],
+      followerCount: 50,
+    };
+
+    const hydrated = await hydrateWithSnapchain(candidate, {
+      fetchUserBundle: async () => liveBundle,
+    } as never);
+
+    expect(hydrated.avatar).toMatchObject({
+      initials: "CA",
+      start: "#8A5CFF",
+      end: "#27D7FF",
+      imageUrl: "https://cdn.example.com/avatars/candidate.png",
+    });
+  });
 });

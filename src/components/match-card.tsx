@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import {
   Activity,
   ArrowUpRight,
@@ -77,14 +77,7 @@ export function MatchCard({ match, featured = false }: MatchCardProps) {
       <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/30 to-transparent" />
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div
-            className="flex h-14 w-14 items-center justify-center rounded-[20px] text-base font-black text-white shadow-[0_20px_35px_rgba(8,10,20,0.55)]"
-            style={{
-              backgroundImage: `linear-gradient(135deg, ${candidate.avatar.start}, ${candidate.avatar.end})`,
-            }}
-          >
-            {candidate.avatar.initials}
-          </div>
+          <AvatarBadge avatar={candidate.avatar} displayName={candidate.displayName} />
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-bold text-white">{candidate.displayName}</h3>
@@ -217,6 +210,42 @@ export function MatchCard({ match, featured = false }: MatchCardProps) {
         </button>
       </div>
     </article>
+  );
+}
+
+function AvatarBadge({
+  avatar,
+  displayName,
+}: {
+  avatar: RankedMatch["candidate"]["avatar"];
+  displayName: string;
+}) {
+  const [hasImageError, setHasImageError] = useState(false);
+  const imageUrl = avatar.imageUrl && !hasImageError ? avatar.imageUrl : null;
+
+  return (
+    <div
+      className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[20px] text-base font-black text-white shadow-[0_20px_35px_rgba(8,10,20,0.55)]"
+      style={{
+        backgroundImage: imageUrl
+          ? undefined
+          : `linear-gradient(135deg, ${avatar.start}, ${avatar.end})`,
+      }}
+    >
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- profile photo hosts are user-provided and cannot be safely preconfigured for next/image.
+        <img
+          src={imageUrl}
+          alt={`${displayName} profile photo`}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setHasImageError(true)}
+        />
+      ) : (
+        avatar.initials
+      )}
+    </div>
   );
 }
 

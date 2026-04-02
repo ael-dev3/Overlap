@@ -36,6 +36,7 @@ export interface AvatarToken {
   initials: string;
   start: string;
   end: string;
+  imageUrl?: string;
 }
 
 export interface ActivitySnapshot {

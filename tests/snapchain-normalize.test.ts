@@ -12,6 +12,11 @@ describe("Snapchain normalization", () => {
       messages: [
         {
           data: {
+            userDataBody: { type: 1, value: "https://cdn.example.com/avatars/overlap.png" },
+          },
+        },
+        {
+          data: {
             userDataBody: { type: 6, value: "overlap" },
           },
         },
@@ -29,10 +34,25 @@ describe("Snapchain normalization", () => {
     });
 
     expect(result).toEqual({
+      pfpUrl: "https://cdn.example.com/avatars/overlap.png",
       username: "overlap",
       displayName: "Overlap App",
       bio: "Discovery, not clout.",
     });
+  });
+
+  it("ignores unsupported profile photo URLs", () => {
+    const result = normalizeUserDataResponse({
+      messages: [
+        {
+          data: {
+            userDataBody: { type: 1, value: "javascript:alert('xss')" },
+          },
+        },
+      ],
+    });
+
+    expect(result).toEqual({});
   });
 
   it("normalizes Farcaster-epoch cast timestamps and channel ids", () => {

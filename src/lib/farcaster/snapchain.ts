@@ -128,6 +128,16 @@ function normalizeUserDataType(value: unknown) {
   }
 }
 
+function normalizeProfileImageUrl(value: string) {
+  try {
+    const url = new URL(value);
+
+    return url.protocol === "http:" || url.protocol === "https:" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function normalizeUserDataResponse(raw: unknown) {
   const profile: Partial<SnapchainLiveBundle> = {};
 
@@ -152,7 +162,7 @@ export function normalizeUserDataResponse(raw: unknown) {
 
     switch (type) {
       case 1:
-        profile.pfpUrl = value;
+        profile.pfpUrl = normalizeProfileImageUrl(value);
         break;
       case 2:
         profile.displayName = value;
@@ -305,6 +315,12 @@ function mergeLiveSignals<T extends CandidateProfile | ViewerProfile>(
     username: liveBundle.username ?? actor.username,
     displayName: liveBundle.displayName ?? actor.displayName,
     bio: liveBundle.bio ?? actor.bio,
+    avatar: liveBundle.pfpUrl
+      ? {
+          ...actor.avatar,
+          imageUrl: liveBundle.pfpUrl,
+        }
+      : actor.avatar,
     activity: {
       ...actor.activity,
       sampleCasts: casts.length > 0 ? casts : actor.activity.sampleCasts,
