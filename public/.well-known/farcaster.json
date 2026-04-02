@@ -8,7 +8,7 @@
     "version": "1",
     "name": "Overlap",
     "iconUrl": "https://overlap-fc.web.app/overlap-icon.svg",
-    "homeUrl": "https://overlap-fc.web.app/?miniApp=true&v=8371c03",
+    "homeUrl": "https://overlap-fc.web.app/?miniApp=true&v=a169a62",
     "imageUrl": "https://overlap-fc.web.app/overlap-card.svg",
     "buttonTitle": "Open Overlap",
     "splashImageUrl": "https://overlap-fc.web.app/overlap-icon.svg",
@@ -26,7 +26,7 @@
     "ogTitle": "Overlap",
     "ogDescription": "Discover relevant Farcaster people through roles, ecosystems, and real profile context.",
     "ogImageUrl": "https://overlap-fc.web.app/overlap-card.svg",
-    "castShareUrl": "https://overlap-fc.web.app/?miniApp=true&v=8371c03",
+    "castShareUrl": "https://overlap-fc.web.app/?miniApp=true&v=a169a62",
     "requiredCapabilities": [
       "actions.composeCast",
       "actions.viewProfile",
