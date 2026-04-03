@@ -1,9 +1,7 @@
 import {
   ecosystemLabels,
   interestLabels,
-  offeringLabels,
   roleLabels,
-  seekingLabels,
 } from "@/lib/taxonomy";
 import type {
   CandidateProfile,
@@ -39,6 +37,24 @@ const compatibilityMap: Record<SeekingIntent, OfferingIntent[]> = {
   feedback: ["feedback", "brainstorm"],
   distribution: ["distribution", "brainstorm"],
   brainstorm: ["brainstorm", "feedback", "build"],
+};
+
+const seekingReasonPhrases: Record<SeekingIntent, string> = {
+  cofounder: "need a cofounder",
+  dev: "need a dev",
+  designer: "need a designer",
+  feedback: "want feedback",
+  distribution: "want distribution",
+  brainstorm: "are open to brainstorming",
+};
+
+const offeringReasonPhrases: Record<OfferingIntent, string> = {
+  build: "can build",
+  design: "can design",
+  feedback: "can give feedback",
+  distribution: "can help with distribution",
+  brainstorm: "are open to brainstorming",
+  role_opening: "are hiring",
 };
 
 function jaccardScore<T extends string | number>(
@@ -124,6 +140,65 @@ function findCompatibleIntentPair(
   }
 
   return null;
+}
+
+function buildIntentReason(
+  viewer: ViewerProfile,
+  candidate: CandidateProfile,
+  breakdown: MatchBreakdown,
+): MatchReason | null {
+  if (breakdown.intent <= 0.2) {
+    return null;
+  }
+
+  const forwardScore = compatibilityScore(
+    viewer.discovery.seeking,
+    candidate.discovery.offering,
+  );
+  const reverseScore = compatibilityScore(
+    candidate.discovery.seeking,
+    viewer.discovery.offering,
+  );
+  const forwardPair =
+    forwardScore > 0
+      ? findCompatibleIntentPair(
+          viewer.discovery.seeking,
+          candidate.discovery.offering,
+        )
+      : null;
+  const reversePair =
+    reverseScore > 0
+      ? findCompatibleIntentPair(
+          candidate.discovery.seeking,
+          viewer.discovery.offering,
+        )
+      : null;
+
+  if (reversePair && reverseScore > forwardScore) {
+    return {
+      code: "shared_intent",
+      label: `They ${seekingReasonPhrases[reversePair.need]}; you ${offeringReasonPhrases[reversePair.offer]}.`,
+      weight: breakdown.intent * weights.intent,
+    };
+  }
+
+  if (forwardPair) {
+    return {
+      code: "shared_intent",
+      label: `You ${seekingReasonPhrases[forwardPair.need]}; they ${offeringReasonPhrases[forwardPair.offer]}.`,
+      weight: breakdown.intent * weights.intent,
+    };
+  }
+
+  if (!reversePair) {
+    return null;
+  }
+
+  return {
+    code: "shared_intent",
+    label: `They ${seekingReasonPhrases[reversePair.need]}; you ${offeringReasonPhrases[reversePair.offer]}.`,
+    weight: breakdown.intent * weights.intent,
+  };
 }
 
 function scoreIntent(viewer: ViewerProfile, candidate: CandidateProfile) {
@@ -259,19 +334,9 @@ function buildReasons(
     });
   }
 
-  if (breakdown.intent > 0.2) {
-    const compatibleIntent = findCompatibleIntentPair(
-      viewer.discovery.seeking,
-      candidate.discovery.offering,
-    );
-
-    if (compatibleIntent) {
-      reasons.push({
-        code: "shared_intent",
-        label: `${seekingLabels[compatibleIntent.need]} lines up with ${offeringLabels[compatibleIntent.offer]}.`,
-        weight: breakdown.intent * weights.intent,
-      });
-    }
+  const intentReason = buildIntentReason(viewer, candidate, breakdown);
+  if (intentReason) {
+    reasons.push(intentReason);
   }
 
   const sharedTopics = uniqueIntersection(

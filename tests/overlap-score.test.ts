@@ -141,8 +141,30 @@ describe("rankMatches", () => {
     const [ranked] = rankMatches(defaultViewerSeed, [candidate]);
     const intentReason = ranked.reasons.find((reason) => reason.code === "shared_intent");
 
-    expect(intentReason?.label).toBe("Want feedback lines up with Open to brainstorm.");
+    expect(intentReason?.label).toBe(
+      "You want feedback; they are open to brainstorming.",
+    );
     expect(intentReason?.label).not.toContain("distribution");
+  });
+
+  it("explains reverse intent compatibility when the candidate needs what you offer", () => {
+    const candidate = buildCandidate("reverse-intent", {
+      discovery: {
+        roles: ["builder"],
+        ecosystems: ["base"],
+        interests: ["ai"],
+        seeking: ["dev"],
+        offering: [],
+        about: "",
+        building: "",
+      },
+    });
+
+    const [ranked] = rankMatches(defaultViewerSeed, [candidate]);
+    const intentReason = ranked.reasons.find((reason) => reason.code === "shared_intent");
+
+    expect(ranked.breakdown.intent).toBeGreaterThan(0.3);
+    expect(intentReason?.label).toBe("They need a dev; you can build.");
   });
 
   it("keeps the activity explanation tied to the weekly snapshot", () => {
