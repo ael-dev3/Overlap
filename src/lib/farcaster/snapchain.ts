@@ -9,6 +9,7 @@ import type {
 import { ecosystemOptions, interestOptions } from "@/lib/taxonomy";
 
 const farcasterEpochMs = Date.UTC(2021, 0, 1, 0, 0, 0, 0);
+const dayMs = 24 * 60 * 60 * 1000;
 
 const interestSignals: Record<InterestTag, RegExp[]> = {
   ai: [/\bai\b/i, /\bllm\b/i, /\bmodel\b/i, /\binference\b/i],
@@ -136,6 +137,58 @@ function normalizeProfileImageUrl(value: string) {
   } catch {
     return undefined;
   }
+}
+
+function parseIsoTimestamp(value: string | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function utcDayKey(timestampMs: number) {
+  return new Date(timestampMs).toISOString().slice(0, 10);
+}
+
+function deriveRecentActivity(casts: readonly SnapchainCast[], now = Date.now()) {
+  const timedCasts = casts
+    .map((cast) => {
+      const timestampMs = parseIsoTimestamp(cast.timestamp);
+
+      if (timestampMs === null || timestampMs > now) {
+        return null;
+      }
+
+      return {
+        ...cast,
+        timestampMs,
+      };
+    })
+    .filter(
+      (
+        cast,
+      ): cast is SnapchainCast & {
+        timestampMs: number;
+      } => cast !== null,
+    );
+
+  if (timedCasts.length === 0) {
+    return null;
+  }
+
+  const recentWeekStart = now - 7 * dayMs;
+  const recentMonthStart = now - 30 * dayMs;
+  const weeklyCasts = timedCasts.filter((cast) => cast.timestampMs >= recentWeekStart);
+  const monthlyCasts = timedCasts.filter((cast) => cast.timestampMs >= recentMonthStart);
+
+  return {
+    castsLast7d: weeklyCasts.length,
+    repliesLast7d: weeklyCasts.filter((cast) => cast.isReply).length,
+    activeDays7d: new Set(weeklyCasts.map((cast) => utcDayKey(cast.timestampMs))).size,
+    activeDays30d: new Set(monthlyCasts.map((cast) => utcDayKey(cast.timestampMs))).size,
+  };
 }
 
 export function normalizeUserDataResponse(raw: unknown) {
@@ -306,6 +359,7 @@ function mergeLiveSignals<T extends CandidateProfile | ViewerProfile>(
 ) {
   const casts = liveBundle.casts.slice(0, 3).map((cast) => cast.text);
   const extracted = extractSignalsFromCasts(casts);
+  const recentActivity = deriveRecentActivity(liveBundle.casts);
   const liveChannels = liveBundle.casts
     .map((cast) => cast.channelId)
     .filter((channelId): channelId is string => typeof channelId === "string");
@@ -333,16 +387,10 @@ function mergeLiveSignals<T extends CandidateProfile | ViewerProfile>(
           ? extracted.extractedEcosystems
           : actor.activity.extractedEcosystems,
       channels: liveChannels.length > 0 ? [...new Set(liveChannels)] : actor.activity.channels,
-      castsLast7d: Math.max(actor.activity.castsLast7d, liveBundle.casts.length),
-      repliesLast7d: Math.max(
-        actor.activity.repliesLast7d,
-        liveBundle.casts.filter((cast) => cast.isReply).length,
-      ),
-      activeDays7d: Math.max(actor.activity.activeDays7d, Math.min(7, liveBundle.casts.length)),
-      activeDays30d: Math.max(
-        actor.activity.activeDays30d,
-        Math.min(30, liveBundle.casts.length * 2),
-      ),
+      castsLast7d: recentActivity?.castsLast7d ?? actor.activity.castsLast7d,
+      repliesLast7d: recentActivity?.repliesLast7d ?? actor.activity.repliesLast7d,
+      activeDays7d: recentActivity?.activeDays7d ?? actor.activity.activeDays7d,
+      activeDays30d: recentActivity?.activeDays30d ?? actor.activity.activeDays30d,
       lastActiveAt: liveBundle.lastActiveAt ?? actor.activity.lastActiveAt,
       followingFids:
         liveBundle.followingFids.length > 0
