@@ -3,17 +3,34 @@ import { describe, expect, it } from "vitest";
 import {
   formatAddress,
   getWalletErrorMessage,
+  isEthereumAddress,
   normalizeAccountList,
   requestAccounts,
 } from "../src/lib/wallet";
 
 describe("wallet helpers", () => {
-  it("normalizes account lists to lowercase unique addresses", () => {
+  it("recognizes only complete hexadecimal Ethereum addresses", () => {
+    expect(isEthereumAddress("0xABCD000000000000000000000000000000000001")).toBe(
+      true,
+    );
+    expect(isEthereumAddress("0xabcd000000000000000000000000000000000001")).toBe(
+      true,
+    );
+    expect(isEthereumAddress("0xabc")).toBe(false);
+    expect(isEthereumAddress("0xGBCD000000000000000000000000000000000001")).toBe(
+      false,
+    );
+    expect(isEthereumAddress(123)).toBe(false);
+  });
+
+  it("normalizes account lists to lowercase unique valid addresses", () => {
     expect(
       normalizeAccountList([
         "0xABCD000000000000000000000000000000000001",
         "0xabcd000000000000000000000000000000000001",
         "0xABCD000000000000000000000000000000000002",
+        "0xabc",
+        "0xGBCD000000000000000000000000000000000001",
         123,
         null,
       ]),

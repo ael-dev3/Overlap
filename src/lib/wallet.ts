@@ -9,6 +9,8 @@ export type EthereumProvider = {
   ) => void;
 };
 
+const ethereumAddressPattern = /^0x[a-fA-F0-9]{40}$/;
+
 export function normalizeAccountList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
@@ -16,9 +18,13 @@ export function normalizeAccountList(value: unknown) {
 
   return [...new Set(
     value
-      .filter((item): item is string => typeof item === "string" && item.startsWith("0x"))
+      .filter(isEthereumAddress)
       .map((item) => item.toLowerCase()),
   )];
+}
+
+export function isEthereumAddress(value: unknown): value is string {
+  return typeof value === "string" && ethereumAddressPattern.test(value);
 }
 
 export async function requestAccounts(
